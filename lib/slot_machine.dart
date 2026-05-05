@@ -101,7 +101,7 @@ class _SlotMachineState
         await SoundService.playWin();
       }
     } else {
-      coinsChange = 1;
+      coinsChange = -1;
       newMessage = 'Попробуй ещё раз ☹ -1 монета';
       await SoundService.playLose();
     }
