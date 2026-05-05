@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:math';
 import 'package:slot_machine/slot_row.dart';
+import 'sound_service.dart';
 
 class SlotMachine extends StatefulWidget {
   const SlotMachine({super.key});
@@ -25,6 +26,8 @@ class _SlotMachineState
   var _slot3 = 'assets/images/seven.png';
   var _message = '';
   var _isSpinning = false;
+  var _isMuted = false;
+  var _backgroundStarted = false;
 
   Future<String> _spinReel({
     required int totalTicks,
@@ -38,51 +41,76 @@ class _SlotMachineState
           : progress < 0.8
           ? 100
           : 200;
-      await Future.delayed(Duration(milliseconds: delay));
-      result = _symbols[_random.nextInt(_symbols.length)];
+      await Future.delayed(
+        Duration(milliseconds: delay),
+      );
+      result =
+          _symbols[_random.nextInt(
+            _symbols.length,
+          )];
       onTick(result);
     }
     return result;
   }
 
+  @override
+  void initState() {
+    super.initState();
+    SoundService.playBackground();
+  }
+
   Future<void> _spin() async {
     if (_coins <= 0 || _isSpinning) return;
+    SoundService.playClick();
     setState(() {
       _isSpinning = true;
       _message = '';
     });
+    if (!_backgroundStarted) {
+      SoundService.playBackground();
+     _backgroundStarted = true;
+    }
 
     final result1 = await _spinReel(
       totalTicks: 10,
-      onTick: (val) => setState(() => _slot1 = val),     
+      onTick: (val) =>
+          setState(() => _slot1 = val),
     );
     final result2 = await _spinReel(
       totalTicks: 13,
-      onTick: (val) => setState(() => _slot2 = val),     
+      onTick: (val) =>
+          setState(() => _slot2 = val),
     );
     final result3 = await _spinReel(
       totalTicks: 16,
-      onTick: (val) => setState(() => _slot3 = val),     
+      onTick: (val) =>
+          setState(() => _slot3 = val),
     );
 
-    await Future.delayed(Duration(milliseconds: 300));
+    await Future.delayed(
+      Duration(milliseconds: 300),
+    );
     setState(() {
       _isSpinning = false;
-      if (result1 == result2 && result2 == result3){
-        if (result1 == 'assets/images/seven.png') {
+      if (result1 == result2 &&
+          result2 == result3) {
+        if (result1 ==
+            'assets/images/seven.png') {
           _coins += 10;
           _message = 'ДЖЕКПОТ! 🎰🎰🎰 +10 монет';
+          SoundService.playJackpot();
         } else {
           _coins += 3;
           _message = 'Победа! 🎊 +3 монеты';
+          SoundService.playWin();
         }
       } else {
         _coins -= 1;
         _message = 'Попробуй ещё раз ☹ -1 монета';
+        SoundService.playLose();
       }
     });
   }
-
 
   void _reset() {
     setState(() {
@@ -95,11 +123,38 @@ class _SlotMachineState
     });
   }
 
+  void _toggleMute() {
+    SoundService.toggleMute();
+    setState(() {
+      _isMuted = SoundService.isMuted;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
+        Align(
+          alignment: Alignment.topRight,
+          child: Padding(
+            padding: EdgeInsets.only(
+              right: 16,
+              top: 8,
+            ),
+            child: IconButton(
+              onPressed: _toggleMute,
+              icon: Icon(
+                _isMuted
+                    ? Icons.volume_off
+                    : Icons.volume_up,
+                color: Colors.white,
+                size: 28,
+              ),
+            ),
+          ),
+        ),
+
         Text(
           '💰 Монеты: $_coins',
           style: TextStyle(
@@ -113,8 +168,8 @@ class _SlotMachineState
           opacity: _isSpinning ? 0.85 : 1.0,
           duration: Duration(milliseconds: 100),
           child: SlotRow(
-            slot1: _slot1, 
-            slot2: _slot2, 
+            slot1: _slot1,
+            slot2: _slot2,
             slot3: _slot3,
           ),
         ),
@@ -125,14 +180,19 @@ class _SlotMachineState
           child: AnimatedSwitcher(
             duration: Duration(milliseconds: 400),
             child: Text(
-              _isSpinning ? 'Крутим...' : _message, 
+              _isSpinning
+                  ? 'Крутим...'
+                  : _message,
               key: ValueKey(
-                _isSpinning ? 'spinning' : _message,
+                _isSpinning
+                    ? 'spinning'
+                    : _message,
               ),
               style: TextStyle(
                 fontSize: 20,
                 color: Colors.white,
-                fontWeight: _message.contains('ДЖЕКПОТ')
+                fontWeight:
+                    _message.contains('ДЖЕКПОТ')
                     ? FontWeight.bold
                     : FontWeight.normal,
               ),
@@ -141,7 +201,7 @@ class _SlotMachineState
         ),
         SizedBox(height: 40),
         ElevatedButton(
-          onPressed: _coins > 0 && ! _isSpinning
+          onPressed: _coins > 0 && !_isSpinning
               ? _spin
               : null,
           style: ElevatedButton.styleFrom(
@@ -152,7 +212,9 @@ class _SlotMachineState
             ),
           ),
           child: Text(
-            _isSpinning ? '🎰 Крутим...' : 'КРУТИТЬ 🎰',
+            _isSpinning
+                ? '🎰 Крутим...'
+                : 'КРУТИТЬ 🎰',
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
